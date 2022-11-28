@@ -42,6 +42,7 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.UiThreadUtil;
+import com.facebook.react.module.annotations.ReactModule;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 import java.lang.Runnable;
@@ -248,7 +249,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
 
       Log.d(TAG, "SELECTED ROUTE: " +  currentRoute);
 
-      return connectedDevice;
+      return currentRoute;
   }
 
   private boolean hasBluetoothDevices() {
@@ -468,7 +469,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
   private void emitEvent(String eventName,  Object data) {
     executor.execute(() -> {
       if (reactContext != null) {
-      Log.d(TAG, "SEND EVENT IN REACT: ", eventName);
+      Log.d(TAG, "SEND EVENT IN REACT: " + eventName);
           reactContext
               .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
               .emit(eventName, data);
@@ -511,7 +512,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
 
     routeInfo.putString("name", route.getName());
     routeInfo.putString("type", routeType);
-    routeInfo.putBoolean("type", route.isSelected());
+    routeInfo.putBoolean("isSelected", route.isSelected());
 
     return routeInfo;
   }

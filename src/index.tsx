@@ -27,6 +27,7 @@ const AudioManagerEmitter = new NativeEventEmitter(AudioManagerModule);
 export interface IRouteInfo {
   name: string;
   type: TAudioRoute;
+  isSelected: boolean;
 }
 
 export interface IDeviceInfo {
