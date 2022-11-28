@@ -29,7 +29,7 @@ const AudioManagerIosModule = NativeModules.AudioManagerIos
 //   };
 // }
 
-export type TPreferredDeviceType = 'EARPIECE' | 'SPEAKER' | 'BLUETOOTH';
+export type TPreferredDeviceType = 'EARPIECE' | 'SPEAKER_PHONE' | 'BLUETOOTH';
 
 export class AudioManagerIos {
   private static isIos = Platform.OS === 'ios';

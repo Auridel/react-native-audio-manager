@@ -18,7 +18,7 @@ import { AudioManager } from 'react-native-audio-manager';
 AudioManager.start()
 
 // Set preffered output device
-//device: TPreferredDeviceType = 'EARPIECE' | 'SPEAKER' | 'BLUETOOTH'
+//device: TPreferredDeviceType = 'EARPIECE' | 'SPEAKER_PHONE' | 'BLUETOOTH';
 
 AudioManager.setPreferredDevice(device);
 

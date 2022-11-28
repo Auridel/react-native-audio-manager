@@ -10,14 +10,14 @@ import AVFoundation
 protocol AudioManagerProtocol {
     func start()
     func stop()
-    func setPreferredDevice(_ device: String)
+    func chooseAudioRoute(_ device: String)
 }
 
 @objc(AudioManager)
 class AudioManager: NSObject, AudioManagerProtocol {
-    
+
     enum OutputDeviceType: String {
-        case earpiece = "EARPIECE", speaker = "SPEAKER", bluetooth = "BLUETOOTH"
+        case earpiece = "EARPIECE", speaker = "SPEAKER_PHONE", bluetooth = "BLUETOOTH"
     }
     
     private let debugTag = "AudioManager DEBUG: "
@@ -103,7 +103,7 @@ class AudioManager: NSObject, AudioManagerProtocol {
         preferredDevice = .bluetooth
     }
     
-    @objc func setPreferredDevice(_ device: String) {
+    @objc func chooseAudioRoute(_ device: String) {
         guard let deviceType = OutputDeviceType(rawValue: device)
         else {
             return
