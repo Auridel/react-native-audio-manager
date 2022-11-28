@@ -1,13 +1,13 @@
 import { NativeModules, Platform } from 'react-native';
 
 const LINKING_ERROR =
-  `The package 'react-native-audio-manager' doesn't seem to be linked. Make sure: \n\n` +
+  `The package 'react-native-audio-manager-ios' doesn't seem to be linked. Make sure: \n\n` +
   Platform.select({ ios: "- You have run 'pod install'\n", default: '' }) +
   '- You rebuilt the app after installing the package\n' +
   '- You are not using Expo Go\n';
 
-const AudioManager = NativeModules.AudioManager
-  ? NativeModules.AudioManager
+const AudioManagerIosModule = NativeModules.AudioManagerIos
+  ? NativeModules.AudioManagerIos
   : new Proxy(
       {},
       {
@@ -17,6 +17,50 @@ const AudioManager = NativeModules.AudioManager
       }
     );
 
-export function multiply(a: number, b: number): Promise<number> {
-  return AudioManager.multiply(a, b);
+//TODO: implement decorators
+// function platformGuard(_: unknown, __: string, descriptor: PropertyDescriptor) {
+//   const method = descriptor.value!;
+
+//   descriptor.value = function (...args: []) {
+//     if (Platform.OS === 'ios') {
+//       return method.apply(AudioManagerIos, args);
+//     }
+//     return Promise.resolve();
+//   };
+// }
+
+export type TPreferredDeviceType = 'EARPIECE' | 'SPEAKER' | 'BLUETOOTH';
+
+export class AudioManagerIos {
+  private static isIos = Platform.OS === 'ios';
+
+  // @platformGuard
+  public static start() {
+    if (!this.isIos) {
+      console.warn('Android devices are not supported');
+
+      return;
+    }
+    AudioManagerIosModule.start();
+  }
+
+  // @platformGuard
+  public static stop() {
+    if (!this.isIos) {
+      console.warn('Android devices are not supported');
+
+      return;
+    }
+    AudioManagerIosModule.stop();
+  }
+
+  // @platformGuard
+  public static setPreferredDevice(device: TPreferredDeviceType) {
+    if (!this.isIos) {
+      console.warn('Android devices are not supported');
+
+      return;
+    }
+    AudioManagerIosModule.setPreferredDevice(device);
+  }
 }

@@ -2,9 +2,11 @@
 
 @interface RCT_EXTERN_MODULE(AudioManager, NSObject)
 
-RCT_EXTERN_METHOD(multiply:(float)a withB:(float)b
-                 withResolver:(RCTPromiseResolveBlock)resolve
-                 withRejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(start)
+
+RCT_EXTERN_METHOD(stop)
+
+RCT_EXTERN_METHOD(setPreferredDevice:(NSString)device)
 
 + (BOOL)requiresMainQueueSetup
 {
