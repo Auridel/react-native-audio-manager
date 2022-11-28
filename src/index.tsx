@@ -1,4 +1,9 @@
-import { NativeModules, Platform } from 'react-native';
+import {
+  EmitterSubscription,
+  NativeEventEmitter,
+  NativeModules,
+  Platform,
+} from 'react-native';
 
 const LINKING_ERROR =
   `The package 'react-native-audio-manager-ios' doesn't seem to be linked. Make sure: \n\n` +
@@ -6,7 +11,7 @@ const LINKING_ERROR =
   '- You rebuilt the app after installing the package\n' +
   '- You are not using Expo Go\n';
 
-const AudioManagerIosModule = NativeModules.AudioManagerIos
+const AudioManagerModule = NativeModules.AudioManager
   ? NativeModules.AudioManagerIos
   : new Proxy(
       {},
@@ -17,50 +22,123 @@ const AudioManagerIosModule = NativeModules.AudioManagerIos
       }
     );
 
-//TODO: implement decorators
-// function platformGuard(_: unknown, __: string, descriptor: PropertyDescriptor) {
-//   const method = descriptor.value!;
+const AudioManagerEmitter = new NativeEventEmitter(AudioManagerModule);
 
-//   descriptor.value = function (...args: []) {
-//     if (Platform.OS === 'ios') {
-//       return method.apply(AudioManagerIos, args);
-//     }
-//     return Promise.resolve();
-//   };
-// }
+export interface IRouteInfo {
+  name: string;
+  type: TAudioRoute;
+}
 
-export type TPreferredDeviceType = 'EARPIECE' | 'SPEAKER_PHONE' | 'BLUETOOTH';
+export interface IDeviceInfo {
+  id: string;
+  name: string;
+  type: TAudioRoute;
+}
 
-export class AudioManagerIos {
-  private static isIos = Platform.OS === 'ios';
+export type TAudioRoute =
+  | 'EARPIECE'
+  | 'SPEAKER_PHONE'
+  | 'BLUETOOTH'
+  | 'WIRED_HEADSET';
 
-  // @platformGuard
-  public static start() {
-    if (!this.isIos) {
-      console.warn('Android devices are not supported');
+export type TEventListenerActionData = {
+  onRouteAdded: IRouteInfo;
+  onRouteRemoved: IRouteInfo;
+  onRouteSelected: IRouteInfo;
+  onRouteUnselected: IRouteInfo;
+  onAudioDeviceChanged: IDeviceInfo[];
+};
 
-      return;
-    }
-    AudioManagerIosModule.start();
+class AudioManagerService {
+  private isAndroid = Platform.OS === 'android';
+  private subscriptions: Array<{
+    action: keyof TEventListenerActionData;
+    subscription: EmitterSubscription;
+    callback: (
+      data: TEventListenerActionData[keyof TEventListenerActionData]
+    ) => void;
+  }> = [];
+
+  /**
+   * @description Start AudioManager service
+   */
+  public start() {
+    AudioManagerModule.start();
   }
 
-  // @platformGuard
-  public static stop() {
-    if (!this.isIos) {
-      console.warn('Android devices are not supported');
-
-      return;
-    }
-    AudioManagerIosModule.stop();
+  /**
+   * @description Stop AudioManager service
+   */
+  public stop() {
+    AudioManagerModule.stop();
   }
 
-  // @platformGuard
-  public static setPreferredDevice(device: TPreferredDeviceType) {
-    if (!this.isIos) {
-      console.warn('Android devices are not supported');
+  /**
+   * @param route TAudioRoute
+   * @description Only Android Platform
+   */
+  public chooseAudioRoute(route: TAudioRoute) {
+    AudioManagerModule.chooseAudioRoute(route);
+  }
 
-      return;
+  /**
+   * @description Only Android Platform
+   */
+  public getRoutes() {
+    if (this.isAndroid) {
+      return AudioManagerModule.getRoutes() as IRouteInfo[];
     }
-    AudioManagerIosModule.setPreferredDevice(device);
+
+    return [];
+  }
+
+  /**
+   * @description Only Android Platform
+   */
+  public getDevices() {
+    if (this.isAndroid) {
+      return AudioManagerModule.getDevices() as IDeviceInfo[];
+    }
+
+    return [];
+  }
+
+  /**
+   * @param action
+   * @param callback
+   * @description Only Android Platform
+   */
+  public addEventListener<
+    K extends keyof TEventListenerActionData = keyof TEventListenerActionData
+  >(action: K, callback: (data: TEventListenerActionData[K]) => void) {
+    const subscription = AudioManagerEmitter.addListener(
+      action as string,
+      callback
+    );
+    this.subscriptions.push({
+      action,
+      subscription,
+      callback: callback as (
+        data: TEventListenerActionData[keyof TEventListenerActionData]
+      ) => void,
+    });
+  }
+
+  /**
+   * @param callback
+   * @description Only Android Platform
+   */
+  public removeEventListener(
+    callback: (
+      data: TEventListenerActionData[keyof TEventListenerActionData]
+    ) => void
+  ) {
+    const result = this.subscriptions.find((el) => el.callback === callback);
+
+    if (result) {
+      AudioManagerEmitter.removeSubscription(result.subscription);
+    }
   }
 }
+
+export const AudioManager = new AudioManagerService();
