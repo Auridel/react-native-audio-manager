@@ -145,7 +145,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
       TimerTask task = new TimerTask() {
           @Override
           public void run() {
-              checkBluetoothDeviceTask()
+              checkBluetoothDeviceTask();
           }
       };
 
@@ -465,7 +465,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
 
 
   // REACT UTILITY METHODS
-  private emitEvent(String eventName,  Object data) {
+  private void emitEvent(String eventName,  Object data) {
     executor.execute(() -> {
       if (reactContext != null) {
       Log.d(TAG, "SEND EVENT IN REACT: ", eventName);
@@ -626,7 +626,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
 
           WritableArray devicesMap = createJSDevices(devices);
           Log.d(TAG, "DEVICE UPDATED" + devicesMap);
-          emitEvent(DEVICE_CHANGED_EVENT_NAME, devicesMap)
+          emitEvent(DEVICE_CHANGED_EVENT_NAME, devicesMap);
       }
   };
 
