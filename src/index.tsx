@@ -12,7 +12,7 @@ const LINKING_ERROR =
   '- You are not using Expo Go\n';
 
 const AudioManagerModule = NativeModules.AudioManager
-  ? NativeModules.AudioManagerIos
+  ? NativeModules.AudioManager
   : new Proxy(
       {},
       {
