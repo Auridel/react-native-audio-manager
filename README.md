@@ -1,6 +1,6 @@
-# react-native-audio-manager
+# react-native-audio-manager-ios
 
-React Native audio routes manager
+iOS audio routes manager for React Native
 
 ## Installation
 
@@ -11,11 +11,20 @@ npm install react-native-audio-manager
 ## Usage
 
 ```js
-import { multiply } from 'react-native-audio-manager';
+import { AudioManager } from 'react-native-audio-manager';
 
-// ...
+// Start service and intercept audio settings change from other apps
 
-const result = await multiply(3, 7);
+AudioManager.start()
+
+// Set preffered output device
+//device: TPreferredDeviceType = 'EARPIECE' | 'SPEAKER' | 'BLUETOOTH'
+
+AudioManager.setPreferredDevice(device);
+
+// Stop service and set original audio settings
+
+AudioManager.stop()
 ```
 
 ## Contributing
@@ -25,7 +34,3 @@ See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the 
 ## License
 
 MIT
-
----
-
-Made with [create-react-native-library](https://github.com/callstack/react-native-builder-bob)
