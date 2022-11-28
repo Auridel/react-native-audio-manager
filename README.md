@@ -1,6 +1,6 @@
 # react-native-audio-manager-ios
 
-iOS audio routes manager for React Native
+Audio routes manager for React Native
 
 ## Installation
 
