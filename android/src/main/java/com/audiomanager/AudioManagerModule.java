@@ -247,7 +247,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
               correctType = AudioDevice.BLUETOOTH.name();
           } else if (route.isDeviceSpeaker()) {
               correctType = AudioDevice.SPEAKER_PHONE.name();
-          } else (route.isDeviceSpeaker()) {
+          } else if (!route.isDeviceSpeaker()) {
               correctType = AudioDevice.WIRED_HEADSET.name();
           }
 
@@ -271,7 +271,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
                  RouteInfo wiredRoute = routesMap.get(AudioDevice.WIRED_HEADSET.name());
                  RouteInfo speakerRoute = routesMap.get(AudioDevice.SPEAKER_PHONE.name());
 
-                 if (wiredRoute !== null) {
+                 if (wiredRoute != null) {
                     selectAudioRoute(wiredRoute, false);
                  } else if (speakerRoute != null) {
                     selectAudioRoute(speakerRoute, false);
@@ -286,7 +286,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
                 RouteInfo wiredRoute = routesMap.get(AudioDevice.WIRED_HEADSET.name());
                 RouteInfo speakerRoute = routesMap.get(AudioDevice.SPEAKER_PHONE.name());
 
-                if (wiredRoute !== null) {
+                if (wiredRoute != null) {
                    selectAudioRoute(wiredRoute, false);
                 } else if (speakerRoute != null) {
                    selectAudioRoute(speakerRoute, false);
