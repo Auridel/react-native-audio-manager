@@ -84,10 +84,11 @@ class AudioManagerService {
 
   /**
    * @description Only Android Platform
+   * @return List audio routes from system
    */
-  public getRoutes() {
+  public async getRoutes() {
     if (this.isAndroid) {
-      return AudioManagerModule.getRoutes() as IRouteInfo[];
+      return (await AudioManagerModule.getRoutes()) as IRouteInfo[];
     }
 
     return [];
@@ -95,10 +96,11 @@ class AudioManagerService {
 
   /**
    * @description Only Android Platform
+   * @return List audio devices from system
    */
-  public getDevices() {
+  public async getDevices() {
     if (this.isAndroid) {
-      return AudioManagerModule.getDevices() as IDeviceInfo[];
+      return (await AudioManagerModule.getDevices()) as IDeviceInfo[];
     }
 
     return [];

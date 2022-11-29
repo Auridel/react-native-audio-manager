@@ -188,6 +188,18 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
   }
 
   @ReactMethod
+  public getDevices(Promise promise) {
+      AudioDeviceInfo[] devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+      promise.resolve(createJSDevices(devices));
+  }
+
+  @ReactMethod
+  public getRoutes(Promise promise) {
+      List<RouteInfo> routes = mediaRouter.getRoutes();
+      promise.resolve(createJSRoutes(routes));
+  }
+
+  @ReactMethod
   public void abandonAudioFocusJS(Promise promise) {
       promise.resolve(abandonAudioFocus());
   }
@@ -460,11 +472,6 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
       Log.d(TAG, "isBluetoothScoOn: " + state);
   }
 
-  private void onAudioDeviceChange() {
-      executor.execute(onAudioDeviceChangeRunner);
-  }
-
-
   // REACT UTILITY METHODS
   private void emitEvent(String eventName,  Object data) {
     executor.execute(() -> {
@@ -497,6 +504,14 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
       }
 
       return allDeviceInfos;
+  }
+
+  private WritableArray createJSRoutes(List<RouteInfo> routes) {
+       WritableArray allRouteInfos = Arguments.createArray();
+
+       for (RouteInfo route : routes) {
+          allRouteInfos.pushMap(createJSRouteObject(route));
+       }
   }
 
   private WritableMap createJSRouteObject(RouteInfo route) {
@@ -611,12 +626,12 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
       new android.media.AudioDeviceCallback() {
           @Override
           public void onAudioDevicesAdded(AudioDeviceInfo[] addedDevices) {
-              onAudioDeviceChange();
+              executor.execute(onAudioDeviceChangeRunner);
           }
 
           @Override
           public void onAudioDevicesRemoved(AudioDeviceInfo[] removedDevices) {
-              onAudioDeviceChange();
+              executor.execute(onAudioDeviceChangeRunner);
           }
       };
 
