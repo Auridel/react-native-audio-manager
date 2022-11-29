@@ -1,10 +1,11 @@
 //
 //  AudioManager.swift
-//  AudioManager
+//  react-native-audio-manager
 //
 //  Created by Oleg Efimov on 24.11.2022.
 //
 
+import React
 import AVFoundation
 
 protocol AudioManagerProtocol {
@@ -14,15 +15,28 @@ protocol AudioManagerProtocol {
 }
 
 @objc(AudioManager)
-class AudioManager: NSObject, AudioManagerProtocol {
-
+class AudioManager: RCTEventEmitter, AudioManagerProtocol  {
+    
     enum OutputDeviceType: String {
         case earpiece = "EARPIECE", speaker = "SPEAKER_PHONE", bluetooth = "BLUETOOTH"
+    }
+    enum JSEvents: String {
+        case onRouteAdded, onRouteRemoved, onRouteSelected, onRouteUnselected, onAudioDeviceChanged
     }
     
     private let debugTag = "AudioManager DEBUG: "
     private let headsetPorts: [AVAudioSession.Port] = [
         .bluetoothA2DP, .bluetoothHFP, .headphones, .bluetoothLE
+    ]
+    private let baseDevices: [DeviceInfo] = [
+        DeviceInfo(
+            id: UUID().uuidString,
+            name: JSOutputType.EARPIECE.rawValue,
+            type: .EARPIECE),
+        DeviceInfo(
+            id: UUID().uuidString,
+            name: JSOutputType.SPEAKER_PHONE.rawValue,
+            type: .SPEAKER_PHONE),
     ]
     
     private let audioSession = AVAudioSession.sharedInstance()
@@ -42,27 +56,31 @@ class AudioManager: NSObject, AudioManagerProtocol {
             setCategoryPreferences(options, true)
         }
     }
+    private var connectedDevices = [OutputDevice]()
     
     
     //Original config
     private var originalOptions: AudioSessionPreferences
     //base options
-    private let baseOptions = AudioSessionPreferences(category: .playAndRecord,
-                                                      options: [
-                                                        .allowBluetooth,
-                                                        .allowBluetoothA2DP,
-                                                        .defaultToSpeaker,
-                                                        .mixWithOthers
-                                                      ],
-                                                      mode: .videoChat)
+    private let baseOptions = AudioSessionPreferences(
+        category: .playAndRecord,
+        options: [
+            .allowBluetooth,
+            .allowBluetoothA2DP,
+            .defaultToSpeaker,
+            .mixWithOthers
+        ],
+        mode: .videoChat)
     //speakerOptions
-    private let speakerOptions = AudioSessionPreferences(category: .playAndRecord,
-                                                         options: [.defaultToSpeaker, .mixWithOthers],
-                                                         mode: .videoChat)
+    private let speakerOptions = AudioSessionPreferences(
+        category: .playAndRecord,
+        options: [.defaultToSpeaker, .mixWithOthers],
+        mode: .videoChat)
     //earpieceOptions
-    private let earpieceOptions = AudioSessionPreferences(category: .playAndRecord,
-                                                            options: [.mixWithOthers],
-                                                            mode: .voiceChat)
+    private let earpieceOptions = AudioSessionPreferences(
+        category: .playAndRecord,
+        options: [.mixWithOthers],
+        mode: .voiceChat)
     
     
     override init() {
@@ -74,22 +92,38 @@ class AudioManager: NSObject, AudioManagerProtocol {
         super.init()
     }
     
+    deinit {
+        if isActive {
+            stop()
+        }
+    }
+    
+    override func supportedEvents() -> [String]! {
+        return ["onRouteAdded",
+                "onRouteRemoved",
+                "onRouteSelected",
+                "onRouteUnselected",
+                "onAudioDeviceChanged"]
+    }
+    
     @objc func start() {
         isActive = true
         saveOriginalMode()
-        
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(routeChangeHandler(notification:)),
-                                               name: AVAudioSession.routeChangeNotification,
-                                               object: nil)
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(audioInterruptionHandler(notification:)),
-                                               name: AVAudioSession.interruptionNotification,
-                                               object: nil)
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(silenceSecondaryAudioHintHandler(notification:)),
-                                               name: AVAudioSession.silenceSecondaryAudioHintNotification,
-                                               object: nil)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(routeChangeHandler(notification:)),
+            name: AVAudioSession.routeChangeNotification,
+            object: nil)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(audioInterruptionHandler(notification:)),
+            name: AVAudioSession.interruptionNotification,
+            object: nil)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(silenceSecondaryAudioHintHandler(notification:)),
+            name: AVAudioSession.silenceSecondaryAudioHintNotification,
+            object: nil)
         
         setCategoryPreferences(baseOptions, true)
     }
@@ -120,22 +154,13 @@ class AudioManager: NSObject, AudioManagerProtocol {
         preferredDevice = deviceType
     }
     
-    //TODO: add devices list
-    //    func getAccessories() {
-    //        let inputs = audioSession.availableInputs
-    //
-    //        guard let res = inputs
-    //        else { return }
-    //
-    //        //TODO: Get devices through inputs loop
-    //        for route in res {
-    //            printLogs(log: "output \(route.portName)")//LOCALIZED NAME
-    //            printLogs(log: "output \(route.portType)")//AVAudioSessionPort(_rawValue: Speaker)
-    //            printLogs(log: "output \(route.uid)")//SPEAKER
-    //            printLogs(log: "output \(route.description)")
-    //        }
-    //
-    //    }
+    @objc(getDevices:rejecter:)
+    func getDevices(_ resolve: @escaping RCTPromiseResolveBlock,
+                    rejecter reject: @escaping RCTPromiseRejectBlock) {
+        let outputDevices = getAudioDevices()
+        
+        resolve(outputDevices.map({$0.toPlainObject()}))
+    }
     
     //MARK: handlers
     
@@ -154,12 +179,37 @@ class AudioManager: NSObject, AudioManagerProtocol {
             printLogs(log: "Audio route changed with reason: unknown")
         case .newDeviceAvailable:
             printLogs(log: "Audio route changed with reason: newDeviceAvailable")
+            
+            if let device = audioSession.currentRoute.outputs.first {
+                handleDeviceAdded(device: device)
+                
+                if let prevDevice = userInfo[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription,
+                   let prevPort = prevDevice.outputs.first
+                {
+                    handleRouteSelected(prevPort: prevPort)
+                    handleDevicesChanged()
+                }
+            }
         case .oldDeviceUnavailable:
             printLogs(log: "Audio route changed with reason: oldDeviceUnavailable")
+            
+            if let device = userInfo[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription,
+               let port = device.outputs.first
+            {
+                handleDeviceRemoved(device: port)
+                handleRouteSelected(prevPort: port)
+                handleDevicesChanged()
+            }
         case .categoryChange:
             printLogs(log: "Audio route changed with reason: categoryChange")
         case .override:
             printLogs(log: "Audio route changed with reason: override")
+            if let device = userInfo[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription,
+               let port = device.outputs.first
+            {
+                handleRouteSelected(prevPort: port)
+            }
+            handleDevicesChanged()
         case .wakeFromSleep:
             printLogs(log: "Audio route changed with reason: wakeFromSleep")
         case .noSuitableRouteForCategory:
@@ -247,5 +297,113 @@ class AudioManager: NSObject, AudioManagerProtocol {
             return baseOptions
         }
     }
+    
+    private func getAudioDevices() -> [DeviceInfo] {
+        guard let availableInputs = audioSession.availableInputs
+        else { return baseDevices }
+        
+        connectedDevices = []
+        
+        for input in availableInputs {
+            if headsetPorts.contains(input.portType) {
+                if input.portType == .headphones {
+                    connectedDevices.append(OutputDevice(
+                        id: input.uid,
+                        name: input.portName,
+                        port: input))
+                } else {
+                    connectedDevices.append(OutputDevice(
+                        id: input.uid,
+                        name: input.portName,
+                        port: input))
+                }
+            }
+        }
+        
+        let availableExternalDevices = connectedDevices.map {
+            DeviceInfo(id: $0.id,
+                       name: $0.name,
+                       type: $0.port.portType == .headphones ? .WIRED_HEADSET : .BLUETOOTH)
+        }
+        let outputDevices = baseDevices + availableExternalDevices
+        
+        printLogs(log: "get devices \(outputDevices)")
+        
+        return outputDevices
+    }
+    
+    private func getJSPortType(_ output: AVAudioSessionPortDescription) -> JSOutputType? {
+        if output.portType == .builtInSpeaker {
+            return .SPEAKER_PHONE
+        } else if output.portType == .builtInReceiver {
+            return .EARPIECE
+        } else if headsetPorts.contains(output.portType) {
+            if output.portType == .headphones {
+                return .WIRED_HEADSET
+            } else {
+                return .BLUETOOTH
+            }
+        }
+        
+        return nil
+    }
+    
+    private func handleDevicesChanged() {
+        let outputDevices = getAudioDevices()
+        
+        sendEvent(withName: JSEvents.onAudioDeviceChanged.rawValue,
+                  body: outputDevices.map({$0.toPlainObject()}))
+    }
+    
+    private func handleDeviceAdded(device: AVAudioSessionPortDescription) {
+        guard let jsOutputType = getJSPortType(device)
+        else { return }
+        let jsDeviceData = RouteInfo(
+            id: device.uid,
+            name: device.portName,
+            type: jsOutputType,
+            isSelected: audioSession.currentRoute.outputs.first?.uid == device.uid)
+        
+        sendEvent(withName: JSEvents.onRouteAdded.rawValue,
+                  body: jsDeviceData.toPlainObject())
+    }
+    
+    private func handleDeviceRemoved(device: AVAudioSessionPortDescription) {
+        guard let jsOutputType = getJSPortType(device)
+        else { return }
+        
+        let jsDeviceData = RouteInfo(
+            id: device.uid,
+            name: device.portName,
+            type: jsOutputType,
+            isSelected: audioSession.currentRoute.outputs.first?.uid == device.uid)
+        
+        sendEvent(withName: JSEvents.onRouteRemoved.rawValue,
+                  body: jsDeviceData.toPlainObject())
+    }
+    
+    private func handleRouteSelected(prevPort: AVAudioSessionPortDescription) {
+        guard let currentOutputPort = audioSession.currentRoute.outputs.first,
+              prevPort.uid != currentOutputPort.uid,
+              let jsCurrentOutputType = getJSPortType(currentOutputPort),
+              let jsPrevOutputType = getJSPortType(prevPort)
+        else { return }
+        
+        
+        let jsPrevDeviceData = RouteInfo(
+            id: prevPort.uid,
+            name: prevPort.portName,
+            type: jsPrevOutputType,
+            isSelected: audioSession.currentRoute.outputs.first?.uid == prevPort.uid)
+        let jsCurrentDeviceData = RouteInfo(
+            id: currentOutputPort.uid,
+            name: currentOutputPort.portName,
+            type: jsCurrentOutputType,
+            isSelected: audioSession.currentRoute.outputs.first?.uid == currentOutputPort.uid)
+        
+        sendEvent(withName: JSEvents.onRouteSelected.rawValue,
+                  body: jsCurrentDeviceData.toPlainObject())
+        sendEvent(withName: JSEvents.onRouteUnselected.rawValue,
+                  body: jsPrevDeviceData.toPlainObject())
+    }
 }
-

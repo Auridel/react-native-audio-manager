@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		F4FF95D7245B92E800C19C63 /* AudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4FF95D6245B92E800C19C63 /* AudioManager.swift */; };
 		F87D97062934B5B300BFEE42 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB0F8B2934B4660008B3CE /* Models.swift */; };
+		F88A1DB9293645B100CC37B5 /* Extension+Encodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F88A1DB7293644B100CC37B5 /* Extension+Encodable.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -26,8 +27,9 @@
 /* Begin PBXFileReference section */
 		134814201AA4EA6300B7C361 /* libAudioManager.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libAudioManager.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		B3E7B5891CC2AC0600A0062D /* AudioManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AudioManager.m; sourceTree = "<group>"; };
-		F4FF95D5245B92E700C19C63 /* AudioManager-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "AudioManager-Bridging-Header.h"; sourceTree = "<group>"; };
-		F4FF95D6245B92E800C19C63 /* AudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioManager.swift; sourceTree = SOURCE_ROOT; };
+		F4FF95D5245B92E700C19C63 /* AudioManager-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "AudioManager-Bridging-Header.h"; sourceTree = SOURCE_ROOT; };
+		F4FF95D6245B92E800C19C63 /* AudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioManager.swift; sourceTree = "<group>"; };
+		F88A1DB7293644B100CC37B5 /* Extension+Encodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Extension+Encodable.swift"; sourceTree = "<group>"; };
 		F8CB0F8B2934B4660008B3CE /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -55,6 +57,7 @@
 			children = (
 				F4FF95D6245B92E800C19C63 /* AudioManager.swift */,
 				F8CB0F8B2934B4660008B3CE /* Models.swift */,
+				F88A1DB7293644B100CC37B5 /* Extension+Encodable.swift */,
 				B3E7B5891CC2AC0600A0062D /* AudioManager.m */,
 				F4FF95D5245B92E700C19C63 /* AudioManager-Bridging-Header.h */,
 				134814211AA4EA7D00B7C361 /* Products */,
@@ -120,6 +123,7 @@
 			files = (
 				F4FF95D7245B92E800C19C63 /* AudioManager.swift in Sources */,
 				F87D97062934B5B300BFEE42 /* Models.swift in Sources */,
+				F88A1DB9293645B100CC37B5 /* Extension+Encodable.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
