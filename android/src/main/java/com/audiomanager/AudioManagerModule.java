@@ -234,7 +234,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
   private void setAudioRouteFromRoutes(String audioRoute) {
       Log.d(TAG, "setAudioRouteFromRoutes route: " + audioRoute);
       List<RouteInfo> routes = mediaRouter.getRoutes();
-      Map<String, RouteInfo> routesMap = new HashMap();
+      HashMap<String, RouteInfo> routesMap = new HashMap();
       RouteInfo selectedRoute = routes.stream()
           .filter(route -> route.isSelected())
           .findAny()
