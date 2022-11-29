@@ -49,6 +49,7 @@ import java.lang.Runnable;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.Timer;
@@ -233,26 +234,69 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
   private void setAudioRouteFromRoutes(String audioRoute) {
       Log.d(TAG, "setAudioRouteFromRoutes route: " + audioRoute);
       List<RouteInfo> routes = mediaRouter.getRoutes();
+      Map<String, RouteInfo> routesMap = new HashMap();
+      RouteInfo selectedRoute = routes.stream()
+          .filter(route -> route.isSelected())
+          .findAny()
+          .orElse(null);
 
-      if (audioRoute.equals(AudioDevice.BLUETOOTH.name())) {
-          RouteInfo bluetoothRoute = routes.stream()
-              .filter(route -> route.isBluetooth())
-              .findAny()
-              .orElse(null);
+      for (RouteInfo route: routes) {
+          String correctType = AudioDevice.NONE.name();
 
-          if (bluetoothRoute != null) {
-              selectAudioRoute(bluetoothRoute, false);
+          if (route.isBluetooth()) {
+              correctType = AudioDevice.BLUETOOTH.name();
+          } else if (route.isDeviceSpeaker()) {
+              correctType = AudioDevice.SPEAKER_PHONE.name();
+          } else (route.isDeviceSpeaker()) {
+              correctType = AudioDevice.WIRED_HEADSET.name();
           }
-      } else if (audioRoute.equals(AudioDevice.SPEAKER_PHONE.name())) {
-          RouteInfo speakerRoute = routes.stream()
-              .filter(route -> route.isDeviceSpeaker())
-              .findAny()
-              .orElse(null);
 
-          if (speakerRoute != null) {
-              selectAudioRoute(speakerRoute, true);
-          }
+          routesMap.put(correctType, route);
       }
+
+      if (audioRoute.equals(AudioDevice.BLUETOOTH.name()) && routesMap.containsKey(AudioDevice.BLUETOOTH.name())) {
+          RouteInfo bluetoothRoute = routesMap.get(AudioDevice.BLUETOOTH.name());
+          selectAudioRoute(bluetoothRoute, false);
+      } else if (audioRoute.equals(AudioDevice.SPEAKER_PHONE.name())) {
+          if (routesMap.containsKey(AudioDevice.SPEAKER_PHONE.name())) {
+             RouteInfo speakerRoute = routesMap.get(AudioDevice.SPEAKER_PHONE.name());
+             selectAudioRoute(speakerRoute, true);
+          } else if (routesMap.containsKey(AudioDevice.WIRED_HEADSET.name())) {
+             RouteInfo wiredRoute = routesMap.get(AudioDevice.WIRED_HEADSET.name());
+             selectAudioRoute(wiredRoute, true);
+          }
+      } else if (audioRoute.equals(AudioDevice.WIRED_HEADSET.name())) {
+          if (selectedRoute != null) {
+              if (selectedRoute.isBluetooth()) {
+                 RouteInfo wiredRoute = routesMap.get(AudioDevice.WIRED_HEADSET.name());
+                 RouteInfo speakerRoute = routesMap.get(AudioDevice.SPEAKER_PHONE.name());
+
+                 if (wiredRoute !== null) {
+                    selectAudioRoute(wiredRoute, false);
+                 } else if (speakerRoute != null) {
+                    selectAudioRoute(speakerRoute, false);
+                 }
+              } else if (selectedRoute.isDeviceSpeaker()) {
+                audioManager.setSpeakerphoneOn(false);
+              }
+          }
+      } else if (audioRoute.equals(AudioDevice.EARPIECE.name())) {
+         if (selectedRoute != null) {
+             if (selectedRoute.isBluetooth()) {
+                RouteInfo wiredRoute = routesMap.get(AudioDevice.WIRED_HEADSET.name());
+                RouteInfo speakerRoute = routesMap.get(AudioDevice.SPEAKER_PHONE.name());
+
+                if (wiredRoute !== null) {
+                   selectAudioRoute(wiredRoute, false);
+                } else if (speakerRoute != null) {
+                   selectAudioRoute(speakerRoute, false);
+                }
+             } else {
+                audioManager.setSpeakerphoneOn(false);
+             }
+         }
+      }
+
   }
 
   private String getCurrentSelectedDevice() {
