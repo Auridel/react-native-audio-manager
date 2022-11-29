@@ -238,7 +238,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
               .findAny()
               .orElse(null);
 
-          if (bluetoothRoute) {
+          if (bluetoothRoute != null) {
               selectAudioRoute(bluetoothRoute, false);
           }
       } else if (audioRoute.equals(AudioDevice.SPEAKER_PHONE.name())) {
@@ -247,7 +247,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
               .findAny()
               .orElse(null);
 
-          if (speakerRoute) {
+          if (speakerRoute != null) {
               selectAudioRoute(speakerRoute, true);
           }
       }
