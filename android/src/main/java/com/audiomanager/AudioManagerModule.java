@@ -522,6 +522,8 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
        for (RouteInfo route : routes) {
           allRouteInfos.pushMap(createJSRouteObject(route));
        }
+
+       return allRouteInfos;
   }
 
   private WritableMap createJSRouteObject(RouteInfo route) {
