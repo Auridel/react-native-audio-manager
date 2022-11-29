@@ -276,7 +276,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
                  } else if (speakerRoute != null) {
                     selectAudioRoute(speakerRoute, false);
                  }
-              } else if (selectedRoute.isDeviceSpeaker()) {
+              } else {
                 audioManager.setSpeakerphoneOn(false);
               }
           }
