@@ -64,6 +64,8 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
   private static final String ROUTE_SELECTED_EVENT_NAME = "onRouteSelected";
   private static final String ROUTE_UNSELECTED_EVENT_NAME = "onRouteUnselected";
   private static final String DEVICE_CHANGED_EVENT_NAME = "onAudioDeviceChanged";
+  private final static int HEADSET_PLUGGED = 1;
+  private final static int HEADSET_UNPLUGGED = 0;
 
   // AudioAttributes
   private AudioAttributes mAudioAttributes;
@@ -77,7 +79,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
   private MediaRouter.Callback mediaRouterCallback;
 
   // BluetoothReceiver
-  private final BroadcastReceiver bluetoothHeadsetReceiver;
+  private final BroadcastReceiver headsetReceiver;
   private final BluetoothProfile.ServiceListener bluetoothServiceListener;
   private BluetoothHeadset bluetoothHeadset;
 
@@ -95,9 +97,9 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
       this.reactContext = reactContext;
 
       audioManager = ((AudioManager) reactContext.getSystemService(Context.AUDIO_SERVICE));
-      bluetoothServiceListener = new BluetoothServiceListener();
-      bluetoothHeadsetReceiver = new BluetoothHeadsetBroadcastReceiver();
+      headsetReceiver = new HeadsetBroadcastReceiver();
 
+      bluetoothServiceListener = new BluetoothServiceListener();
       BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
       bluetoothAdapter.getProfileProxy(reactContext, bluetoothServiceListener, BluetoothProfile.HEADSET);
       Log.d(TAG, TAG + "- initialized");
@@ -118,9 +120,10 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
 
   @ReactMethod
   public void start(Promise promise) {
-      IntentFilter bluetoothHeadsetFilter = new IntentFilter();
-      bluetoothHeadsetFilter.addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED);
-      reactContext.registerReceiver(bluetoothHeadsetReceiver, bluetoothHeadsetFilter);
+      IntentFilter headsetFilter = new IntentFilter();
+      headsetFilter.addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED);
+      headsetFilter.addAction(Intent.ACTION_HEADSET_PLUG);
+      reactContext.registerReceiver(headsetReceiver, headsetFilter);
 
       requestAudioFocus();
 
@@ -211,7 +214,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
 
   @ReactMethod
   public void isWiredHeadsetPluggedIn(Promise promise) {
-      promise.resolve(this.hasWiredHeadset());
+      promise.resolve(hasWiredHeadset());
   }
 
   // COMMON METHODS
@@ -226,20 +229,27 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
 
   @MainThread
   private void setAudioRouteFromRoutes(String audioRoute) {
-      Log.d(TAG, "setAudioRouteFromRoutes");
+      Log.d(TAG, "setAudioRouteFromRoutes route: " + audioRoute);
       List<RouteInfo> routes = mediaRouter.getRoutes();
 
-      // FIXME: need find in list and setup;
-      for (RouteInfo route : routes) {
-           logRouteInfo("setAudioRouteFromRoutes", route);
+      if (audioRoute.equals(AudioDevice.BLUETOOTH.name())) {
+          RouteInfo bluetoothRoute = routes.stream()
+              .filter(route -> route.isBluetooth())
+              .findAny()
+              .orElse(null);
 
-           if (audioRoute.equals(AudioDevice.BLUETOOTH.name()) && route.isBluetooth()) {
-             selectAudioRoute(route, false);
-             return;
-           } else if (audioRoute.equals(AudioDevice.SPEAKER_PHONE.name()) && route.isDeviceSpeaker()) {
-             selectAudioRoute(route, true);
-             return;
-           }
+          if (bluetoothRoute) {
+              selectAudioRoute(bluetoothRoute, false);
+          }
+      } else if (audioRoute.equals(AudioDevice.SPEAKER_PHONE.name())) {
+          RouteInfo speakerRoute = routes.stream()
+              .filter(route -> route.isDeviceSpeaker())
+              .findAny()
+              .orElse(null);
+
+          if (speakerRoute) {
+              selectAudioRoute(speakerRoute, true);
+          }
       }
   }
 
@@ -565,11 +575,10 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
           logRouteInfo("MediaRouterCallback onRouteRemoved: ", route);
           emitEvent(ROUTE_REMOVED_EVENT_NAME, createJSRouteObject(route));
 
-          if (route.getDeviceType() == DEVICE_TYPE_BLUETOOTH) {
+          if (route.getDeviceType() == DEVICE_TYPE_BLUETOOTH && !hasWiredHeadset()) {
               setMode();
               requestAudioFocus();
               audioManager.setSpeakerphoneOn(true);
-//               setAudioRouteFromRoutes("SPEAKER_PHONE");
           }
       }
 
@@ -604,7 +613,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
       }
   }
 
-  private class BluetoothHeadsetBroadcastReceiver extends BroadcastReceiver {
+  private class HeadsetBroadcastReceiver extends BroadcastReceiver {
       @Override
       public void onReceive(Context context, Intent intent) {
           final String action = intent.getAction();
@@ -617,6 +626,15 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
                 Log.d(TAG, "BT STATE : " + "--STATE_CONNECTED");
               } else if (state == BluetoothHeadset.STATE_DISCONNECTED) {
                 Log.d(TAG, "BT STATE : " + "--STATE_DISCONNECTED");
+              }
+          } else if (action.equals(Intent.ACTION_HEADSET_PLUG)) {
+              Log.d(TAG, "ACTION  : " + "WeiredHeadset - ACTION_HEADSET_PLUG");
+              final int state = intent.getIntExtra("state", -1);
+
+              if (state == HEADSET_PLUGGED) {
+                Log.d(TAG, "ACTION  : " + "WeiredHeadset - HEADSET_PLUGGED");
+              } else if (state == HEADSET_UNPLUGGED) {
+                Log.d(TAG, "ACTION  : " + "WeiredHeadset - HEADSET_UNPLUGGED");
               }
           }
       }
