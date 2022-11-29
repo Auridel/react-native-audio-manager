@@ -167,7 +167,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
       abandonAudioFocus();
 
       audioManager.unregisterAudioDeviceCallback(audioDeviceCallback);
-      reactContext.unregisterReceiver(bluetoothHeadsetReceiver);
+      reactContext.unregisterReceiver(headsetReceiver);
 
       handler.post(() -> {
          mediaRouter.removeCallback(mediaRouterCallback);
