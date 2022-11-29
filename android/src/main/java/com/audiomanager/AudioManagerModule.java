@@ -191,13 +191,13 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
   }
 
   @ReactMethod
-  public getDevices(Promise promise) {
+  public void getDevices(Promise promise) {
       AudioDeviceInfo[] devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
       promise.resolve(createJSDevices(devices));
   }
 
   @ReactMethod
-  public getRoutes(Promise promise) {
+  public void getRoutes(Promise promise) {
       List<RouteInfo> routes = mediaRouter.getRoutes();
       promise.resolve(createJSRoutes(routes));
   }
