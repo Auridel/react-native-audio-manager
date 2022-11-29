@@ -198,8 +198,10 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
 
   @ReactMethod
   public void getRoutes(Promise promise) {
-      List<RouteInfo> routes = mediaRouter.getRoutes();
-      promise.resolve(createJSRoutes(routes));
+      handler.post(() -> {
+          List<RouteInfo> routes = mediaRouter.getRoutes();
+          promise.resolve(createJSRoutes(routes));
+      });
   }
 
   @ReactMethod
@@ -520,6 +522,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
        WritableArray allRouteInfos = Arguments.createArray();
 
        for (RouteInfo route : routes) {
+          logRouteInfo("createJSRoutes ROUTE: ", route);
           allRouteInfos.pushMap(createJSRouteObject(route));
        }
 
