@@ -90,12 +90,22 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
   private final Handler handler = new Handler(Looper.getMainLooper());
   private final int DEVICE_TYPE_BLUETOOTH = 3;
   private Timer scoStatusTimer;
+  private boolean wiredHeadsetIsPlugged = false;
   public enum AudioDevice { SPEAKER_PHONE, WIRED_HEADSET, EARPIECE, BLUETOOTH, NONE }
 
 
   public AudioManagerModule(ReactApplicationContext reactContext) {
       super(reactContext);
       this.reactContext = reactContext;
+
+      handler.post(() -> {
+          mediaRouter = MediaRouter.getInstance(reactContext);
+          mediaRouterCallback = new MediaRouterCallback();
+          MediaRouteSelector mSelector = new MediaRouteSelector.Builder()
+                          .addControlCategory(MediaControlIntent.CATEGORY_LIVE_AUDIO)
+                          .build();
+          mediaRouter.addCallback(mSelector, mediaRouterCallback);
+      });
 
       audioManager = ((AudioManager) reactContext.getSystemService(Context.AUDIO_SERVICE));
       headsetReceiver = new HeadsetBroadcastReceiver();
@@ -131,15 +141,6 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
       audioManager.registerAudioDeviceCallback(audioDeviceCallback, null);
       audioManager.setMicrophoneMute(false);
 
-      handler.post(() -> {
-         mediaRouter = MediaRouter.getInstance(reactContext);
-         mediaRouterCallback = new MediaRouterCallback();
-         MediaRouteSelector mSelector = new MediaRouteSelector.Builder()
-                         .addControlCategory(MediaControlIntent.CATEGORY_LIVE_AUDIO)
-                         .build();
-         mediaRouter.addCallback(mSelector, mediaRouterCallback);
-      });
-
       scoStatusTimer = new Timer();
       TimerTask task = new TimerTask() {
           @Override
@@ -151,31 +152,32 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
       // scoStatusTimer.schedule(task, 0, 1000);
 
       handler.post(() -> {
-          HashMap<String, RouteInfo> routesMap = getRoutesHashMap();
-          RouteInfo bluetoothRoute = routesMap.get(AudioDevice.BLUETOOTH.name());
-          RouteInfo speakerRoute = routesMap.get(AudioDevice.SPEAKER_PHONE.name());
-          RouteInfo wiredRoute = routesMap.get(AudioDevice.WIRED_HEADSET.name());
-          String selectedRoute = AudioDevice.NONE.name();
+         List<RouteInfo> routes = mediaRouter.getRoutes();
+         HashMap<String, RouteInfo> routesMap = getRoutesHashMap(routes);
+         RouteInfo bluetoothRoute = routesMap.get(AudioDevice.BLUETOOTH.name());
+         RouteInfo speakerRoute = routesMap.get(AudioDevice.SPEAKER_PHONE.name());
+         RouteInfo wiredRoute = routesMap.get(AudioDevice.WIRED_HEADSET.name());
+         String selectedRoute = AudioDevice.NONE.name();
 
-          if (bluetoothRoute != null) {
-              selectAudioRoute(bluetoothRoute, false);
-              selectedRoute = AudioDevice.BLUETOOTH.name();
-          } else if (wiredRoute != null) {
-              selectAudioRoute(wiredRoute, false);
-              selectedRoute = AudioDevice.WIRED_HEADSET.name();
-          } else if (speakerRoute != null) {
-              selectAudioRoute(speakerRoute, true);
-              selectedRoute = AudioDevice.SPEAKER_PHONE.name();
-          }
+         if (bluetoothRoute != null) {
+             selectAudioRoute(bluetoothRoute, false);
+             selectedRoute = AudioDevice.BLUETOOTH.name();
+         } else if (wiredRoute != null) {
+             selectAudioRoute(wiredRoute, false);
+             selectedRoute = AudioDevice.WIRED_HEADSET.name();
+         } else if (speakerRoute != null) {
+             selectAudioRoute(speakerRoute, true);
+             selectedRoute = AudioDevice.SPEAKER_PHONE.name();
+         }
 
-          AudioDeviceInfo[] devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
-          WritableMap data = Arguments.createMap();
+         AudioDeviceInfo[] devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+         WritableMap data = Arguments.createMap();
 
-          data.putString("selectedDevice", selectedRoute);
-          data.putArray("devices", createJSDevices(devices));
+         data.putString("selectedDevice", selectedRoute);
+         data.putArray("devices", createJSDevices(devices));
 
-          promise.resolve(data);
-      })
+         promise.resolve(data);
+      });
   }
 
   @ReactMethod
@@ -258,7 +260,8 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
   @MainThread
   private void setAudioRouteFromRoutes(String audioRoute) {
       Log.d(TAG, "setAudioRouteFromRoutes route: " + audioRoute);
-      HashMap<String, RouteInfo> routesMap = getRoutesHashMap();
+      List<RouteInfo> routes = mediaRouter.getRoutes();
+      HashMap<String, RouteInfo> routesMap = getRoutesHashMap(routes);
       RouteInfo selectedRoute = routes.stream()
           .filter(route -> route.isSelected())
           .findAny()
@@ -294,8 +297,7 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
       }
   }
 
-  private HashMap<String, RouteInfo> getRoutesHashMap() {
-      List<RouteInfo> routes = mediaRouter.getRoutes();
+  private HashMap<String, RouteInfo> getRoutesHashMap(List<RouteInfo> routes) {
       HashMap<String, RouteInfo> routesMap = new HashMap();
 
       for (RouteInfo route: routes) {
@@ -546,13 +548,14 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
 
   // REACT UTILITY METHODS
   private void emitEvent(String eventName,  Object data) {
+    if (!reactContext.hasActiveCatalystInstance()) {
+       return;
+    }
+
     executor.execute(() -> {
-      if (reactContext != null) {
-      Log.d(TAG, "SEND EVENT IN REACT: " + eventName);
-          reactContext
-              .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-              .emit(eventName, data);
-      }
+      reactContext
+          .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+          .emit(eventName, data);
     });
   }
 
@@ -698,10 +701,21 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
               final int state = intent.getIntExtra("state", -1);
 
               if (state == HEADSET_PLUGGED) {
-                Log.d(TAG, "ACTION  : " + "WeiredHeadset - HEADSET_PLUGGED");
+                if (!wiredHeadsetIsPlugged) {
+                   Log.d(TAG, "ACTION  : " + "WeiredHeadset - HEADSET_PLUGGED");
+                   wiredHeadsetIsPlugged = true;
+                   handler.post(() -> {
+                       setAudioRouteFromRoutes("WIRED_HEADSET");
+                   });
+                }
               } else if (state == HEADSET_UNPLUGGED) {
-                setAudioRouteFromRoutes("SPEAKER_PHONE")
-                Log.d(TAG, "ACTION  : " + "WeiredHeadset - HEADSET_UNPLUGGED");
+                if (wiredHeadsetIsPlugged) {
+                    Log.d(TAG, "ACTION  : " + "WeiredHeadset - HEADSET_UNPLUGGED");
+                    wiredHeadsetIsPlugged = false;
+                    handler.post(() -> {
+                        setAudioRouteFromRoutes("SPEAKER_PHONE");
+                    });
+                }
               }
           }
       }
