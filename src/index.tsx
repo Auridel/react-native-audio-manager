@@ -95,21 +95,15 @@ class AudioManagerService {
   }
 
   /**
-   * @description Only Android Platform
    * @return List audio devices from system
    */
   public async getDevices() {
-    if (this.isAndroid) {
-      return (await AudioManagerModule.getDevices()) as IDeviceInfo[];
-    }
-
-    return [];
+    return (await AudioManagerModule.getDevices()) as IDeviceInfo[];
   }
 
   /**
    * @param action
    * @param callback
-   * @description Only Android Platform
    */
   public addEventListener<
     K extends keyof TEventListenerActionData = keyof TEventListenerActionData
@@ -129,7 +123,6 @@ class AudioManagerService {
 
   /**
    * @param callback
-   * @description Only Android Platform
    */
   public removeEventListener(
     callback: (
