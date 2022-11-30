@@ -25,6 +25,7 @@ const AudioManagerModule = NativeModules.AudioManager
 const AudioManagerEmitter = new NativeEventEmitter(AudioManagerModule);
 
 export interface IRouteInfo {
+  id: string;
   name: string;
   type: TAudioRoute;
   isSelected: boolean;
@@ -72,6 +73,7 @@ class AudioManagerService {
    */
   public stop() {
     AudioManagerModule.stop();
+    this.removeAllListeners();
   }
 
   /**
@@ -133,6 +135,28 @@ class AudioManagerService {
 
     if (result) {
       AudioManagerEmitter.removeSubscription(result.subscription);
+    }
+  }
+
+  /**
+   * @description Remove all listeners
+   */
+  removeAllListeners(): void;
+  /**
+   * @param event
+   * @description Remove all listeners from event
+   */
+  removeAllListeners(event: keyof TEventListenerActionData): void;
+  public removeAllListeners(event?: keyof TEventListenerActionData) {
+    if (event) {
+      this.subscriptions.filter(({ action }) => action !== event);
+      AudioManagerEmitter.removeAllListeners(event);
+    } else {
+      this.subscriptions.forEach(({ subscription }) => {
+        AudioManagerEmitter.removeSubscription(subscription);
+      });
+
+      this.subscriptions = [];
     }
   }
 }

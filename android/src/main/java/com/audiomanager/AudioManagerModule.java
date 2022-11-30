@@ -656,12 +656,6 @@ public class AudioManagerModule extends ReactContextBaseJavaModule implements Au
           logRouteInfo("MediaRouterCallback onRouteSelected: ", route);
           emitEvent(ROUTE_SELECTED_EVENT_NAME, createJSRouteObject(route));
       }
-
-      @Override
-      public void onRouteUnselected(MediaRouter router, RouteInfo route) {
-          logRouteInfo("MediaRouterCallback onRouteUnselected: ", route);
-          emitEvent(ROUTE_UNSELECTED_EVENT_NAME, createJSRouteObject(route));
-      }
   }
 
   private class BluetoothServiceListener implements BluetoothProfile.ServiceListener {

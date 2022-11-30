@@ -120,6 +120,7 @@
       "prettier"
     ],
     "rules": {
+      "no-dupe-class-members": 0,
       "prettier/prettier": [
         "error",
         {
