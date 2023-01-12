@@ -1,4 +1,4 @@
-# react-native-audio-manager-ios
+# react-native-audio-manager
 
 Audio routes manager for React Native
 
